@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Protected Login</title>
+  <style>
+    :root{--bg1:#eef6ff;--bg2:#dce6f9;--card:#ffffff;--accent:#0b63d6;--err:#d9534f;--success:#28a745}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Helvetica,Arial,sans-serif;background:linear-gradient(270deg,var(--bg1),var(--bg2));background-size:400% 400%;animation:gradientMove 12s ease infinite;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;overflow:hidden;position:relative;transition:opacity 1s ease}
+    body.fade-out{opacity:0}
+
+    .floating-shape{position:absolute;width:120px;height:120px;background:rgba(11,99,214,0.08);border-radius:50%;animation:float 12s ease-in-out infinite;z-index:0}
+    .shape1{top:10%;left:15%;animation-delay:0s}
+    .shape2{bottom:15%;right:10%;animation-delay:3s}
+    .shape3{top:60%;left:70%;animation-delay:6s}
+
+    .card{width:100%;max-width:420px;background:var(--card);border-radius:12px;box-shadow:0 10px 30px rgba(11,99,214,0.08);padding:28px;opacity:0;transform:translateY(40px);animation:fadeInUp 1s ease forwards;z-index:1;position:relative;transition:all .6s ease}
+    h1{margin:0 0 8px;font-size:20px;color:#0b2b4a;animation:fadeIn 1.2s ease forwards}
+    p.lead{margin:0 0 20px;color:#46627a;font-size:14px;opacity:0;animation:fadeIn 1.5s ease forwards}
+    label{display:block;font-size:13px;color:#234; margin-bottom:6px}
+    input[type="text"],input[type="password"]{width:100%;padding:12px;border:1px solid #e6eef7;border-radius:8px;font-size:14px;transition:all .3s ease}
+    input[type="text"]:focus,input[type="password"]:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(11,99,214,0.15);outline:none}
+    .actions{display:flex;align-items:center;justify-content:space-between;margin-top:18px}
+    button{background:var(--accent);color:#fff;border:0;padding:10px 14px;border-radius:8px;font-weight:600;cursor:pointer;transition:transform .2s ease, box-shadow .2s ease}
+    button:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(11,99,214,0.2)}
+    button:disabled{background:#ccc;cursor:not-allowed}
+    .error{color:var(--err);font-size:13px;margin-top:12px;display:none;animation:shake .4s ease}
+    .small{font-size:12px;color:#6b7a8a}
+
+    .success-message,.loading-message{display:none;text-align:center}
+    .success-message{color:var(--success);font-weight:600;font-size:16px;animation:fadeIn 0.6s ease forwards}
+    .checkmark{width:60px;height:60px;border-radius:50%;display:inline-block;position:relative;border:4px solid var(--success);animation:popIn 0.4s ease forwards;margin-bottom:10px}
+    .checkmark::after{content:"";position:absolute;left:14px;top:18px;width:16px;height:32px;border:solid var(--success);border-width:0 4px 4px 0;transform:rotate(45deg);animation:drawCheck 0.5s ease forwards}
+
+    .spinner{border:4px solid #e6eef7;border-top:4px solid var(--accent);border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;margin:0 auto 12px}
+    .loading-message{color:#0b2b4a;font-weight:500;font-size:15px;animation:fadeIn 0.6s ease forwards}
+
+    #lockoutProgress {width: 100%;height: 8px;background: #eee;border-radius: 6px;margin-top: 8px;overflow: hidden;display:none}
+    #lockoutProgress div {height: 100%;width: 0%;background: red;transition: width 1s linear, background-color 1s linear}
+
+    @keyframes gradientMove {0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+    @keyframes fadeInUp {from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeIn {from{opacity:0}to{opacity:1}}
+    @keyframes shake {0%{transform:translateX(0)}25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-5px)}100%{transform:translateX(0)}}
+    @keyframes float {0%,100%{transform:translateY(0)}50%{transform:translateY(-40px)}}
+    @keyframes popIn {from{transform:scale(0.5);opacity:0}to{transform:scale(1);opacity:1}}
+    @keyframes drawCheck {from{width:0;height:0;opacity:0}to{width:16px;height:32px;opacity:1}}
+    @keyframes spin {0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+
+    @media (max-width:420px){.card{padding:20px}}
+  </style>
+</head>
+<body>
+  <div class="floating-shape shape1"></div>
+  <div class="floating-shape shape2"></div>
+  <div class="floating-shape shape3"></div>
+
+  <main class="card" role="main" id="loginCard">
+    <h1>Sign in to continue</h1>
+    <p class="lead">Please enter your UserID and Password.</p>
+    <form id="loginForm" autocomplete="off">
+      <div style="margin-bottom:14px">
+        <label for="userid">User ID</label>
+        <input id="userid" name="userid" type="text" placeholder="you@domain.com" required />
+      </div>
+      <div style="margin-bottom:6px">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" placeholder="Password" required />
+      </div>
+      <div class="actions">
+        <div class="small">Powered by vighe</div>
+        <button type="submit" id="loginBtn">Sign In</button>
+      </div>
+      <div id="error" class="error" role="status"></div>
+      <div id="lockoutProgress"><div></div></div>
+    </form>
+    <div class="loading-message" id="loadingMsg">
+      <div class="spinner"></div>
+      Checking credentials...
+    </div>
+    <div class="success-message" id="successMsg">
+      <div class="checkmark"></div>
+      Login successful! Redirecting...
+    </div>
+  </main>
+
+  <audio id="successSound" preload="auto">
+    <source src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" type="audio/ogg">
+    <source src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="errorSound" preload="auto">
+    <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" type="audio/ogg">
+    <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    const VALID_USER = atob("YWRtaW5AdmlnaGUuZWR1Lmlu");  // "admin@vighe.edu.in"
+    const VALID_PASS = atob("VmlkaGFyYmhhQGFpdTc4Ng==");  // "Vidharbha@aiu786"
+    const REDIRECT_URL = "main/public/index.html";
+
+    const form = document.getElementById('loginForm');
+    const err = document.getElementById('error');
+    const successMsg = document.getElementById('successMsg');
+    const loadingMsg = document.getElementById('loadingMsg');
+    const successSound = document.getElementById('successSound');
+    const errorSound = document.getElementById('errorSound');
+    const loginBtn = document.getElementById('loginBtn');
+    const lockoutProgress = document.getElementById('lockoutProgress');
+    const lockoutBar = lockoutProgress.querySelector('div');
+
+    let attempts = 0;
+    const maxAttempts = 3;
+    const lockoutTime = 60; // seconds
+    let lockoutTimer;
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      err.style.display = 'none';
+      const user = document.getElementById('userid').value.trim();
+      const pass = document.getElementById('password').value;
+
+      if (user === VALID_USER && pass === VALID_PASS) {
+        form.style.display = 'none';
+        loadingMsg.style.display = 'block';
+        setTimeout(() => {
+          loadingMsg.style.display = 'none';
+          successMsg.style.display = 'block';
+          successSound.play();
+          setTimeout(() => {
+            document.body.classList.add('fade-out');
+            setTimeout(() => {
+              window.location.href = REDIRECT_URL;
+            }, 1000);
+          }, 2000);
+        }, 1500);
+      } else {
+        attempts++;
+        errorSound.play();
+        if (attempts >= maxAttempts) {
+          lockout();
+        } else {
+          err.textContent = `Incorrect User ID or Password. Attempt ${attempts} of ${maxAttempts}.`;
+          err.style.display = 'block';
+          err.style.animation = 'none';
+          err.offsetHeight;
+          err.style.animation = null;
+        }
+      }
+    });
+
+    function lockout() {
+      let remaining = lockoutTime;
+      loginBtn.disabled = true;
+      lockoutProgress.style.display = 'block';
+      err.textContent = `Too many failed attempts. Try again in ${remaining} seconds.`;
+      err.style.display = 'block';
+      updateProgressBar(remaining);
+
+      lockoutTimer = setInterval(() => {
+        remaining--;
+        err.textContent = `Too many failed attempts. Try again in ${remaining} seconds.`;
+        updateProgressBar(remaining);
+        if (remaining <= 0) {
+          clearInterval(lockoutTimer);
+          attempts = 0;
+          loginBtn.disabled = false;
+          lockoutProgress.style.display = 'none';
+          err.style.display = 'none';
+        }
+      }, 1000);
+    }
+
+    function updateProgressBar(remaining) {
+      const percent = ((lockoutTime - remaining) / lockoutTime) * 100;
+      lockoutBar.style.width = percent + "%";
+      if (percent < 33) {
+        lockoutBar.style.backgroundColor = "red";
+      } else if (percent < 66) {
+        lockoutBar.style.backgroundColor = "orange";
+      } else {
+        lockoutBar.style.backgroundColor = "green";
+      }
+    } 
+  </script>
+  <link rel="stylesheet" href="servers.js">
+</body>
+</html>

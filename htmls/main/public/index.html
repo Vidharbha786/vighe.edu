@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Student Admissions (Demo)</title>
+  <style>
+    /* (Styling unchanged from original except small header change) */
+    :root{
+      --bg:#0b3d2e; --bg-2:#0f4d3a; --accent:#f7c948; --muted:#d9efe6; --text:#f5fbf9; --ink:#0e1f18;
+      --card:#113f31; --ok:#19b27b; --warn:#ffcc00; --danger:#ff6b6b; --shadow: 0 6px 20px rgba(0,0,0,.25);
+      --radius: 14px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font:14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--text);}
+    .app{display:grid; grid-template-columns: 260px 1fr; min-height:100vh}
+    .aside{background:var(--bg-2); padding:18px; border-right:1px solid rgba(255,255,255,.08)}
+    .brand{display:flex; align-items:center; gap:10px; font-weight:800;}
+    .logo{width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #1aa06d, #0a6a50); display:grid; place-items:center;}
+    .main{display:flex; flex-direction:column}
+    .topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px; border-bottom:1px solid rgba(255,255,255,.08);}
+    .btn{border:0; padding:10px 14px; border-radius:10px; background:var(--accent); color:#1b1b1b; font-weight:700; cursor:pointer; box-shadow:var(--shadow)}
+    .btn.secondary{background:rgba(255,255,255,.08); color:var(--text); border:1px solid rgba(255,255,255,.14)}
+    .content{padding:18px; display:grid; gap:18px}
+    .panel{background:var(--card); border:1px solid rgba(255,255,255,.12); padding:16px; border-radius:var(--radius); box-shadow:var(--shadow)}
+    .form{display:grid; grid-template-columns: repeat(6, 1fr); gap:10px}
+    .form label{font-size:12px; opacity:.9}
+    .form input, .form select, .form textarea{width:100%; border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.06); color:var(--text); padding:8px 10px; border-radius:8px}
+    .form textarea{grid-column: 1 / -1; min-height:72px}
+    .table{width:100%; border-collapse: collapse;}
+    .table th,.table td{border-bottom:1px solid rgba(255,255,255,.08); padding:10px; text-align:left; font-size:13px}
+    .right{display:flex; justify-content:flex-end; gap:8px}
+    @media (max-width: 960px){
+      .app{grid-template-columns: 1fr}
+      .form{grid-template-columns: repeat(2,1fr)}
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <aside class="aside">
+      <div class="brand">
+        <div class="logo"><span>₹</span></div>
+        <div>
+          <div>Admissions</div>
+          <small class="muted">Demo (Student admissions)</small>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="search">
+          <input type="search" id="globalSearch" placeholder="Search admissions" />
+          <button class="btn" id="newAdmissionBtn">New Admission</button>
+        </div>
+      </div>
+
+      <section class="content" id="page-admissions">
+        <div class="panel">
+          <h2>New Admission</h2>
+          <!-- FORM: Student-specific fields -->
+          <form id="admissionForm" class="form">
+            <div style="grid-column: span 3">
+              <label>Student Name</label>
+              <input id="s-name" required />
+            </div>
+            <div style="grid-column: span 3">
+              <label>Course Name</label>
+              <input id="s-course" required />
+            </div>
+            <div style="grid-column: span 2">
+              <label>Course Duration (e.g., 6 months)</label>
+              <input id="s-duration" required />
+            </div>
+            <div style="grid-column: span 2">
+              <label>Admission Date</label>
+              <input id="s-admission" type="date" required />
+            </div>
+            <div style="grid-column: span 2">
+              <label>Total Fees</label>
+              <input id="s-total" type="number" min="0" step="0.01" required />
+            </div>
+            <div style="grid-column: span 2">
+              <label>Paid Fees</label>
+              <input id="s-paid" type="number" min="0" step="0.01" required />
+            </div>
+            <div style="grid-column: span 2">
+              <label>Remaining Fees</label>
+              <input id="s-remaining" type="number" min="0" step="0.01" required />
+            </div>
+            <div style="grid-column: span 3">
+              <label>Contact Number</label>
+              <input id="s-contact" required />
+            </div>
+            <div style="grid-column: 1 / -1">
+              <label>Remarks</label>
+              <textarea id="s-remarks" placeholder="Remarks (optional)"></textarea>
+            </div>
+            <div style="grid-column: 1 / -1" class="right">
+              <button type="button" class="btn secondary" id="resetAdmission">Reset</button>
+              <button class="btn" id="saveAdmission">Save Admission</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h2>Admissions</h2>
+          <input type="search" id="admissionSearch" placeholder="Filter admissions" style="margin-bottom:10px; width:280px" />
+          <table class="table" id="admissionTable"><thead><tr><th>#</th><th>Student</th><th>Course</th><th>Admission</th><th class="right">Paid</th><th class="right">Remaining</th><th>Contact</th><th></th></tr></thead><tbody></tbody></table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+<script>
+  // Simple helper to format currency
+  const fmt = n => `₹${Number(n||0).toLocaleString('en-IN', {maximumFractionDigits:2})}`;
+
+  const qs = (s, p=document) => p.querySelector(s);
+  const qsa = (s, p=document) => [...p.querySelectorAll(s)];
+
+  // API base (served from same origin)
+  const API = '/api/students';
+
+  async function fetchAdmissions(){
+    const res = await fetch(API);
+    return res.ok ? res.json() : [];
+  }
+
+  function fillFormFrom(obj){
+    qs('#s-name').value = obj.name || '';
+    qs('#s-course').value = obj.course || '';
+    qs('#s-duration').value = obj.duration || '';
+    qs('#s-admission').value = obj.admission_date ? obj.admission_date.slice(0,10) : '';
+    qs('#s-total').value = obj.total_fees || '';
+    qs('#s-paid').value = obj.paid_fees || '';
+    qs('#s-remaining').value = obj.remaining_fees || '';
+    qs('#s-contact').value = obj.contact || '';
+    qs('#s-remarks').value = obj.remarks || '';
+    qs('#saveAdmission').dataset.editId = obj.id || '';
+  }
+
+  function readForm(){
+    return {
+      name: qs('#s-name').value.trim(),
+      course: qs('#s-course').value.trim(),
+      duration: qs('#s-duration').value.trim(),
+      admission_date: qs('#s-admission').value,
+      total_fees: Number(qs('#s-total').value||0),
+      paid_fees: Number(qs('#s-paid').value||0),
+      remaining_fees: Number(qs('#s-remaining').value||0),
+      contact: qs('#s-contact').value.trim(),
+      remarks: qs('#s-remarks').value.trim()
+    };
+  }
+
+  async function loadAndRender(){
+    const list = await fetchAdmissions();
+    const tbody = qs('#admissionTable tbody'); tbody.innerHTML = '';
+    const term = (qs('#admissionSearch').value||'').toLowerCase();
+    list.filter((s,i)=> {
+      const hay = `${s.name} ${s.course} ${s.contact}`.toLowerCase();
+      return hay.includes(term);
+    }).forEach((s,i)=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${i+1}</td>
+        <td>${s.name}</td>
+        <td>${s.course}</td>
+        <td>${s.admission_date? s.admission_date.slice(0,10):''}</td>
+        <td class="right">${fmt(s.paid_fees)}</td>
+        <td class="right">${fmt(s.remaining_fees)}</td>
+        <td>${s.contact}</td>
+        <td class="right">
+          <button class="btn secondary btn-edit" data-id="${s.id}">✏️</button>
+          <button class="btn secondary btn-del" data-id="${s.id}">🗑</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+    qsa('.btn-edit', tbody).forEach(b=> b.addEventListener('click', onEdit));
+    qsa('.btn-del', tbody).forEach(b=> b.addEventListener('click', onDelete));
+  }
+
+  async function onEdit(e){
+    const id = e.currentTarget.dataset.id;
+    const res = await fetch(API + '/' + id);
+    if(res.ok){
+      const data = await res.json();
+      fillFormFrom(data);
+      window.scrollTo({top:0, behavior:'smooth'});
+    } else alert('Failed to fetch record');
+  }
+
+  async function onDelete(e){
+    const id = e.currentTarget.dataset.id;
+    if(!confirm('Delete this admission?')) return;
+    const res = await fetch(API + '/' + id, { method:'DELETE' });
+    if(res.ok){ loadAndRender(); } else alert('Delete failed');
+  }
+
+  async function onSave(e){
+    e.preventDefault();
+    const obj = readForm();
+    // Basic validation
+    if(!obj.name || !obj.course){ alert('Student name and course required'); return; }
+    const editId = qs('#saveAdmission').dataset.editId;
+    const method = editId ? 'PUT' : 'POST';
+    const url = editId ? (API + '/' + editId) : API;
+    const res = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(obj) });
+    if(res.ok){ qs('#admissionForm').reset(); delete qs('#saveAdmission').dataset.editId; loadAndRender(); }
+    else{ const txt = await res.text(); alert('Save failed: '+txt); }
+  }
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    qs('#s-admission').value = new Date().toISOString().slice(0,10);
+    loadAndRender();
+    qs('#saveAdmission').addEventListener('click', onSave);
+    qs('#resetAdmission').addEventListener('click', ()=> { qs('#admissionForm').reset(); delete qs('#saveAdmission').dataset.editId; qs('#s-admission').value = new Date().toISOString().slice(0,10); });
+    qs('#admissionSearch').addEventListener('input', loadAndRender);
+    qs('#newAdmissionBtn').addEventListener('click', ()=> { qs('#admissionForm').reset(); qs('#s-admission').value = new Date().toISOString().slice(0,10); delete qs('#saveAdmission').dataset.editId; window.scrollTo({top:0, behavior:'smooth'}); });
+  });
+</script>
+</body>
+</html>
